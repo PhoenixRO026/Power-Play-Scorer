@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.PowerPlayScorer" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">#FF1B1B1F</item>
+        <item name="android:windowSplashScreenBackground">#FF1B1B1F</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+    </style>
+</resources>

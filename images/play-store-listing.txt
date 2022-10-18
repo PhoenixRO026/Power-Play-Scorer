@@ -1,0 +1,8 @@
+App name:
+FTC Scorer - Power Play
+
+Short description:
+Score, save, and sync your Power Play matches with this simple app.
+
+Full description:
+FTC Scorer - Power Play let's you calculate the score, save, and sync in the cloud your FTC Power Play matches. Match sharing is coming soon!

@@ -1,0 +1,214 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "5902d707e21aaf1f4541bbe4c04fe89d",
+    "entities": [
+      {
+        "tableName": "Match",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`key` TEXT NOT NULL, `userId` TEXT NOT NULL, `title` TEXT NOT NULL, `createStamp` INTEGER NOT NULL, `editStamp` INTEGER NOT NULL, `uploadStamp` INTEGER, `totalPoints` INTEGER NOT NULL, `twoTeams` INTEGER NOT NULL, `alliance` INTEGER, `favorite` INTEGER NOT NULL, `status` INTEGER NOT NULL, `toBeDeleted` INTEGER NOT NULL, `autoTerminal` INTEGER NOT NULL, `autoGroundJunction` INTEGER NOT NULL, `autoLowJunction` INTEGER NOT NULL, `autoMediumJunction` INTEGER NOT NULL, `autoHighJunction` INTEGER NOT NULL, `autoParked1` INTEGER, `customSignalSleeve1` INTEGER NOT NULL, `autoParked2` INTEGER, `customSignalSleeve2` INTEGER NOT NULL, `driverTerminal` INTEGER NOT NULL, `driverGroundJunction` INTEGER NOT NULL, `driverLowJunction` INTEGER NOT NULL, `driverMediumJunction` INTEGER NOT NULL, `driverHighJunction` INTEGER NOT NULL, `junctionsOwnedByCone` INTEGER NOT NULL, `junctionsOwnedByBeacons` INTEGER, `circuitCompleted` INTEGER NOT NULL, `endParked1` INTEGER NOT NULL, `endParked2` INTEGER NOT NULL, PRIMARY KEY(`key`))",
+        "fields": [
+          {
+            "fieldPath": "key",
+            "columnName": "key",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "userId",
+            "columnName": "userId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createStamp",
+            "columnName": "createStamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "editStamp",
+            "columnName": "editStamp",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "uploadStamp",
+            "columnName": "uploadStamp",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "totalPoints",
+            "columnName": "totalPoints",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "twoTeams",
+            "columnName": "twoTeams",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "alliance",
+            "columnName": "alliance",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "favorite",
+            "columnName": "favorite",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "toBeDeleted",
+            "columnName": "toBeDeleted",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "autoTerminal",
+            "columnName": "autoTerminal",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "autoGroundJunction",
+            "columnName": "autoGroundJunction",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "autoLowJunction",
+            "columnName": "autoLowJunction",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "autoMediumJunction",
+            "columnName": "autoMediumJunction",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "autoHighJunction",
+            "columnName": "autoHighJunction",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "autoParked1",
+            "columnName": "autoParked1",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "customSignalSleeve1",
+            "columnName": "customSignalSleeve1",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "autoParked2",
+            "columnName": "autoParked2",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "customSignalSleeve2",
+            "columnName": "customSignalSleeve2",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "driverTerminal",
+            "columnName": "driverTerminal",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "driverGroundJunction",
+            "columnName": "driverGroundJunction",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "driverLowJunction",
+            "columnName": "driverLowJunction",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "driverMediumJunction",
+            "columnName": "driverMediumJunction",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "driverHighJunction",
+            "columnName": "driverHighJunction",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "junctionsOwnedByCone",
+            "columnName": "junctionsOwnedByCone",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "junctionsOwnedByBeacons",
+            "columnName": "junctionsOwnedByBeacons",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "circuitCompleted",
+            "columnName": "circuitCompleted",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endParked1",
+            "columnName": "endParked1",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endParked2",
+            "columnName": "endParked2",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "columnNames": [
+            "key"
+          ],
+          "autoGenerate": false
+        },
+        "indices": [],
+        "foreignKeys": []
+      }
+    ],
+    "views": [],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '5902d707e21aaf1f4541bbe4c04fe89d')"
+    ]
+  }
+}
