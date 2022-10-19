@@ -84,7 +84,7 @@ class ListViewModel @Inject constructor(
     private fun getList(newOrder: Order = Order.Date(OrderType.Descending)) {
         job?.cancel()
         job = viewModelScope.launch {
-            matchUseCases.getMatches(order = newOrder).collectLatest {newList ->
+            matchUseCases.getMatches(order = newOrder).collectLatest { newList ->
                 _state.update {
                     val newSelectedItems = it.selectedItems.toMutableList()
                     val newIds = newList.map { match ->
