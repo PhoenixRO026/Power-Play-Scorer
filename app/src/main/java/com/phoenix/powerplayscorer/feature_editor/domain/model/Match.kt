@@ -27,6 +27,8 @@ data class Match(
      * 0 = to be uploaded
      * 1 = uploaded
      * 2 = to be updated
+     * 3 = uploadFailed
+     * 4 = deleteFailed
      */
     val status :Int = 0,
     val toBeDeleted: Boolean = false,

@@ -46,6 +46,12 @@ class ListViewModel @Inject constructor(
         }
     }
 
+    fun retryFailedMatch (match: Match) {
+        viewModelScope.launch {
+            matchUseCases.retryMatch(match)
+        }
+    }
+
     fun deleteSelectedMatches(
         onSuccess: () -> Unit
     ) {

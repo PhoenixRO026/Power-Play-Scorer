@@ -19,7 +19,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.tasks.await
 
-class NewRepositoryImpl(
+class RepositoryImpl(
     private val dao: MatchDao,
     private val authUseCases: AuthUseCases
 ): Repository {
@@ -28,40 +28,48 @@ class NewRepositoryImpl(
     private var newMatchListener: ListenerRegistration? = null
     private var deletedMatchesListener: ListenerRegistration? = null
     private val handler = CoroutineExceptionHandler { _, throwable ->
-        if (throwable is CustomException)
-            return@CoroutineExceptionHandler
         Log.e(TAG, "Firebase sync failed.", throwable)
     }
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default + handler)
-    private var uploadJob: Job? = null
-    private var updateJob: Job? = null
-    private var deleteJob: Job? = null
+    private val globalScope = CoroutineScope(SupervisorJob() + Dispatchers.Default + handler)
 
     init {
-        scope.launch {
+        userCollection { uid: String ->
+            launch {
+                deletedMatchesListener = deletedMatchesListener(uid, this@userCollection)
+                val latestStamp = dao.getLatestUploadStamp(uid)
+                newMatchListener = newMatchesListener(latestStamp, uid, this@userCollection)
+            }
+            launch {
+                startUp(uid)
+                upload(uid)
+                update(uid)
+                deleteUploadedMatches(uid)
+                deleteFailedMatches(uid)
+            }
+        }
+    }
+
+    private fun userCollection(
+        block: CoroutineScope.(uid: String) -> Unit
+    ) {
+        var cancelScope: CoroutineScope? = null
+        globalScope.launch {
             authUseCases.getUserIdFlow().collectLatest { _uid ->
-                deletedMatchesListener?.remove()
-                newMatchListener?.remove()
-                uploadJob?.cancel()
-                updateJob?.cancel()
-                deleteJob?.cancel()
+                removeAndCancelJobs(cancelScope)
                 _uid?.let { uid ->
-                    startUp(uid)
-                    uploadJob = launch {
-                        upload(uid, this)
+                    supervisorScope {
+                        cancelScope = this
+                        this.block(uid)
                     }
-                    updateJob = launch {
-                        update(uid, this)
-                    }
-                    deleteJob = launch {
-                        delete(uid, this)
-                    }
-                    deletedMatchesListener = deletedMatchesListener(uid, this)
-                    val latestStamp = dao.getLatestUploadStamp(uid)
-                    newMatchListener = newMatchesListener(latestStamp, uid, this)
                 }
             }
         }
+    }
+
+    private fun removeAndCancelJobs(cancelScope: CoroutineScope?) {
+        deletedMatchesListener?.remove()
+        newMatchListener?.remove()
+        cancelScope?.cancel()
     }
 
     private suspend fun startUp(uid: String) {
@@ -71,79 +79,96 @@ class NewRepositoryImpl(
         }
     }
 
-    private suspend fun upload(
-        id: String,
-        scope: CoroutineScope
+    private fun CoroutineScope.upload(
+        id: String
     ) {
-        dao.getMatchesToBeUploaded(id).collect { matches ->
-            if (matches.isEmpty()) return@collect
-            val uRef = db.collection("users").document(id)
-            for (match in matches) {
-                scope.launch {
-                    val batch = db.batch()
-                    val mRef = uRef.collection("matches").document(match.key)
-                    batch.update(uRef, "matchesIds", FieldValue.arrayUnion(match.key))
-                    batch.set(mRef, match.toFirebaseMatch())
-                    Log.e(TAG, "Attempting to upload a match")
-                    try {
-                        batch.commit().await()
-                        Log.e(TAG, "Uploaded a new batch")
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Failed to upload a match")
-                        throw e
-                    }
-                }
-            }
-        }
-    }
-
-    private suspend fun update(id: String, scope: CoroutineScope) {
-        dao.getMatchesToBeUpdated(id).collect { matches ->
-            if (matches.isEmpty()) return@collect
-
-            val uRef = db.collection("users").document(id)
-            for (match in matches) {
-                scope.launch {
-                    val mRef = uRef.collection("matches").document(match.key)
-                    Log.e(TAG, "Attempting to update a match")
-                    try {
-                        mRef.set(match.toFirebaseMatch()).await()
-                        Log.e(TAG, "Match update successful")
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Match update failed", e)
-                        Log.e(TAG, "Sending match to upload")
-                        dao.insertMatch(
-                            match.copy(
-                                status = 0
+        launch {
+            dao.getMatchesToBeUploaded(id).collect { matches ->
+                if (matches.isEmpty()) return@collect
+                val uRef = db.collection("users").document(id)
+                for (match in matches) {
+                    launch {
+                        val batch = db.batch()
+                        val mRef = uRef.collection("matches").document(match.key)
+                        batch.update(uRef, "matchesIds", FieldValue.arrayUnion(match.key))
+                        batch.set(mRef, match.toFirebaseMatch())
+                        Log.i(TAG, "Attempting to upload a match")
+                        try {
+                            batch.commit().await()
+                            Log.i(TAG, "Uploaded a new batch")
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Failed to upload a match")
+                            dao.insertMatch(
+                                match.copy(
+                                    status = 3
+                                )
                             )
-                        )
-                        //throw e
+                        }
                     }
                 }
             }
         }
     }
 
-    private suspend fun delete(
-        id: String,
-        scope: CoroutineScope
+    private fun CoroutineScope.update(id: String) {
+        launch {
+            dao.getMatchesToBeUpdated(id).collect { matches ->
+                if (matches.isEmpty()) return@collect
+                val uRef = db.collection("users").document(id)
+                for (match in matches) {
+                    launch {
+                        val mRef = uRef.collection("matches").document(match.key)
+                        Log.i(TAG, "Attempting to update a match")
+                        try {
+                            mRef.set(match.toFirebaseMatch()).await()
+                            Log.i(TAG, "Match update successful")
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Match update failed, sending match to upload", e)
+                            dao.insertMatch(
+                                match.copy(
+                                    status = 0
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private fun CoroutineScope.deleteFailedMatches(id: String) {
+        launch {
+            dao.getFailedDeletedMatchesFlow(id).collect {
+                dao.deleteMatches(it)
+            }
+        }
+    }
+
+    private fun CoroutineScope.deleteUploadedMatches(
+        id: String
     ) {
-        dao.getDeletedMatchesFlow(id).collect { matches ->
-            if (matches.isEmpty()) return@collect
-            val uRef = db.collection("users").document(id)
-            for (match in matches) {
-                scope.launch {
-                    val batch = db.batch()
-                    val mRef = uRef.collection("matches").document(match.key)
-                    batch.update(uRef, "matchesIds", FieldValue.arrayRemove(match.key))
-                    batch.delete(mRef)
-                    Log.e(TAG, "Attempting to delete a match")
-                    try {
-                        batch.commit().await()
-                        Log.e(TAG, "Deleted a batch")
-                    } catch (e: Exception) {
-                        Log.e(TAG, "Match delete failed")
-                        throw e
+        launch {
+            dao.getOnlineDeletedMatchesFlow(id).collect { matches ->
+                if (matches.isEmpty()) return@collect
+                val uRef = db.collection("users").document(id)
+                for (match in matches) {
+                    launch {
+                        val batch = db.batch()
+                        val mRef = uRef.collection("matches").document(match.key)
+                        batch.update(uRef, "matchesIds", FieldValue.arrayRemove(match.key))
+                        batch.delete(mRef)
+                        Log.i(TAG, "Attempting to deleteUploadedMatches a match")
+                        try {
+                            batch.commit().await()
+                            Log.i(TAG, "Deleted a batch")
+                        } catch (e: Exception) {
+                            Log.e(TAG, "Match deleteUploadedMatches failed")
+                            dao.insertMatch(
+                                match.copy(
+                                    status = 4
+                                )
+                            )
+                        }
                     }
                 }
             }
@@ -204,6 +229,7 @@ class NewRepositoryImpl(
                     }
                 }
             }
+            Log.e(TAG, "snapshot sorting done")
             scope.launch {
                 Log.e(TAG, "$newMatches")
                 dao.insertMatches(newMatches)
@@ -211,16 +237,6 @@ class NewRepositoryImpl(
         }
     }
 
-    /*override fun getMatches(): Flow<List<Match>> = flow {
-        authUseCases.getUserIdFlow().collect { _uid ->
-            _uid?.let { uid ->
-                dao.getMatches(uid).collect { matchList ->
-                    Log.e(TAG, "New emit with uid: $uid")
-                    emit(matchList)
-                }
-            }
-        }
-    }*/
     override fun getMatches(): Flow<List<Match>> {
         return dao.getMatches(authUseCases.getUserId())
     }
@@ -230,11 +246,7 @@ class NewRepositoryImpl(
     }
 
     override suspend fun insertMatch(match: Match) {
-        return dao.insertMatch(
-            match.copy(
-                status = if (match.status == 1) 2 else 0
-            )
-        )
+        dao.insertMatch(match)
     }
 
     override suspend fun insertMatches(matchList: List<Match>) {
@@ -242,22 +254,6 @@ class NewRepositoryImpl(
     }
 
     override suspend fun deleteMatches(matchList: List<Match>) {
-        val onlineMatches = mutableListOf<Match>()
-        val offlineMatches = mutableListOf<Match>()
-        for (match in matchList) {
-            if (match.userId == "offline") {
-                offlineMatches.add(match)
-            } else {
-                onlineMatches.add(match)
-            }
-        }
-        dao.insertMatches(
-            onlineMatches.map {
-                it.copy(
-                    toBeDeleted = true
-                )
-            }
-        )
-        dao.deleteMatches(offlineMatches)
+        dao.deleteMatches(matchList)
     }
 }

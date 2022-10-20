@@ -5,5 +5,6 @@ data class MatchUseCases(
     val saveMatch: SaveMatch,
     val getMatches: GetMatches,
     val saveMatches: SaveMatches,
-    val deleteMatches: DeleteMatches
+    val deleteMatches: DeleteMatches,
+    val retryMatch: RetryMatch
 )

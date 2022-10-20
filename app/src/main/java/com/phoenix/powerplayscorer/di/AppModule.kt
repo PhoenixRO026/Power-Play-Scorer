@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.phoenix.powerplayscorer.feature_editor.data.data_source.MatchDatabase
 import com.phoenix.powerplayscorer.feature_editor.data.repository.AuthRepositoryImpl
-import com.phoenix.powerplayscorer.feature_editor.data.repository.NewRepositoryImpl
+import com.phoenix.powerplayscorer.feature_editor.data.repository.RepositoryImpl
 import com.phoenix.powerplayscorer.feature_editor.domain.repository.AuthRepository
 import com.phoenix.powerplayscorer.feature_editor.domain.repository.Repository
 import com.phoenix.powerplayscorer.feature_editor.domain.use_case.auth.*
@@ -38,7 +38,7 @@ object AppModule {
         db: MatchDatabase,
         authUseCases: AuthUseCases,
     ): Repository {
-        return NewRepositoryImpl(
+        return RepositoryImpl(
             db.matchDao,
             authUseCases,
         )
@@ -52,7 +52,8 @@ object AppModule {
             getMatch = GetMatch(repository),
             saveMatch = SaveMatch(repository),
             saveMatches = SaveMatches(repository),
-            deleteMatches = DeleteMatches(repository)
+            deleteMatches = DeleteMatches(repository),
+            retryMatch = RetryMatch(repository)
         )
     }
 

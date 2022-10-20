@@ -9,6 +9,22 @@ class DeleteMatches(
     suspend operator fun invoke(
         deletedMatches: List<Match>
     ) {
-        repository.deleteMatches(deletedMatches)
+        val onlineMatches = mutableListOf<Match>()
+        val offlineMatches = mutableListOf<Match>()
+        for (match in deletedMatches) {
+            if (match.userId == "offline") {
+                offlineMatches.add(match)
+            } else {
+                onlineMatches.add(match)
+            }
+        }
+        repository.insertMatches(
+            onlineMatches.map {
+                it.copy(
+                    toBeDeleted = true
+                )
+            }
+        )
+        repository.deleteMatches(offlineMatches)
     }
 }

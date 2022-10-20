@@ -9,8 +9,21 @@ interface MatchDao {
     @Query("SELECT * FROM `match` WHERE `userId` = :userId AND NOT toBeDeleted")
     fun getMatches(userId: String): Flow<List<Match>>
 
-    @Query("SELECT * FROM `match` WHERE `userId` = :userId AND status = 1 AND toBeDeleted")
-    fun getDeletedMatchesFlow(userId: String): Flow<List<Match>>
+    @Query(
+        "SELECT * FROM `match` WHERE " +
+                "`userId` = :userId " +
+                "AND status = 1 " +
+                "AND toBeDeleted"
+    )
+    fun getOnlineDeletedMatchesFlow(userId: String): Flow<List<Match>>
+
+    @Query(
+        "SELECT * FROM `match` WHERE " +
+                "`userId` = :userId " +
+                "AND (status = 3 OR status = 4) " +
+                "AND toBeDeleted"
+    )
+    fun getFailedDeletedMatchesFlow(userId: String): Flow<List<Match>>
 
     @Query("SELECT * FROM `match` WHERE `key` = :key")
     fun getMatchByKey(key: String): Flow<Match?>

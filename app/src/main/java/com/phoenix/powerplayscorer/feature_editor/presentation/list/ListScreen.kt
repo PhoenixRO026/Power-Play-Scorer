@@ -157,6 +157,9 @@ fun ListScreen(
                                 start = 8.dp,
                                 end = 8.dp
                             ),
+                        failedStatusClick = {
+                            viewModel.retryFailedMatch(item)
+                        }
                     )
                     Box(
                         modifier = Modifier
