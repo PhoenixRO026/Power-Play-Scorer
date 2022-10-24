@@ -26,6 +26,7 @@ This is the repository for the open source app [FTC Scorer - Power Play](https:/
 - RO localisation
 - UI Performance optimisation
 - Analytics opt in
+- Separate 2 robot scoring
 ## Products used
 
 - [Jetpack Compose](https://developer.android.com/jetpack/compose)
