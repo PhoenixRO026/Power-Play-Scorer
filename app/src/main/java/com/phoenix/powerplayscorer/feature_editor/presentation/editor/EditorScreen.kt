@@ -12,26 +12,22 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.phoenix.powerplayscorer.R
 import com.phoenix.powerplayscorer.feature_editor.domain.model.Match
 import com.phoenix.powerplayscorer.feature_editor.presentation.editor.components.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
-import kotlin.math.min
-import com.phoenix.powerplayscorer.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditorScreen(
     viewModel: EditorViewModel = hiltViewModel()
 ) {
-    val state = viewModel.state.collectAsState()
-    val editEnabled = viewModel.isEditEnabled.collectAsState()
-    val isNewMatch by viewModel.isNewMatch.collectAsState()
+    val state = viewModel.state.collectAsState(MappedEditorState())
     val screenList = remember {
         screenList(
             state = state,
-            mutableState = viewModel.state,
-            editEnabled = editEnabled
+            mutableState = viewModel.savableState
         )
     }
     val twoTeams by remember { derivedStateOf { state.value.twoTeams } }
@@ -39,7 +35,7 @@ fun EditorScreen(
         floatingActionButton = {
             FloatingActionButton(
                 onClick = {
-                    if (editEnabled.value) {
+                    if (state.value.isEditEnabled) {
                         viewModel.save()
                     } else {
                         viewModel.edit()
@@ -47,7 +43,7 @@ fun EditorScreen(
                 },
                 containerColor = MaterialTheme.colorScheme.primary
             ) {
-                if (editEnabled.value)
+                if (state.value.isEditEnabled)
                     Icon(painterResource(id = R.drawable.done), "Done")
                 else Icon(Icons.Default.Edit, "Edit")
             }
@@ -55,12 +51,15 @@ fun EditorScreen(
         topBar = {
             TopAppBar(
                 checked = twoTeams,
-                editEnabled = editEnabled.value,
-                isNewMatch = isNewMatch,
+                editEnabled = state.value.isEditEnabled,
+                isNewMatch = state.value.isNewMatch,
                 onCheckedChange = { newChecked ->
-                    viewModel.state.update { match ->
-                        match.copy(
-                            twoTeams = newChecked
+                    viewModel.savableState.update { editorState ->
+                        val match = editorState.match
+                        editorState.copy(
+                            match = match.copy(
+                                twoTeams = newChecked
+                            )
                         )
                     }
                 },
@@ -83,122 +82,59 @@ fun EditorScreen(
 }
 
 fun screenList(
-    state: State<Match>,
-    mutableState: MutableStateFlow<Match>,
-    editEnabled: State<Boolean>
+    state: State<MappedEditorState>,
+    mutableState: MutableStateFlow<EditorState>,
 ): List<@Composable (modifier: Modifier) -> Unit> {
-    val autoUpperLimit by derivedStateOf {
-        12 - state.value.let {
-            it.autoTerminal + it.autoGroundJunction + it.autoLowJunction +
-                    it.autoMediumJunction + it.autoHighJunction
-        }
-    }
-    val driverUpperLimit by derivedStateOf {
-        30 - state.value.let {
-            it.driverTerminal + it.driverGroundJunction + it.driverLowJunction +
-                    it.driverMediumJunction + it.driverHighJunction
-        }
-    }
-    val endgameUpperLimit by derivedStateOf {
-        25 - state.value.let {
-            it.junctionsOwnedByCone + it.junctionsOwnedByBeacons
-        }
-    }
-    val twoTeams by derivedStateOf { state.value.twoTeams }
-
-    val autoPoints by derivedStateOf {
-        state.value.let {
-            it.autoTerminal +
-                    it.autoGroundJunction * 2 +
-                    it.autoLowJunction * 3 +
-                    it.autoMediumJunction * 4 +
-                    it.autoHighJunction * 5 +
-                    when (it.autoParked1) {
-                        false -> 2
-                        true -> 10 * (it.customSignalSleeve1 + 1)
-                        else -> 0
-                    } +
-                    when (it.autoParked2) {
-                        false -> 2
-                        true -> 10 * (it.customSignalSleeve2 + 1)
-                        else -> 0
-                    } * it.twoTeams
-        }
-    }
-    val driverPoints by derivedStateOf {
-        state.value.let {
-            it.driverTerminal +
-                    it.driverGroundJunction * 2 +
-                    it.driverLowJunction * 3 +
-                    it.driverMediumJunction * 4 +
-                    it.driverHighJunction * 5
-        }
-    }
-    val endgamePoints by derivedStateOf {
-        state.value.let {
-            it.junctionsOwnedByCone * 3 +
-                    it.junctionsOwnedByBeacons * 10 +
-                    it.circuitCompleted * 20 +
-                    it.endParked1 * 2 +
-                    it.endParked2 * 2 * it.twoTeams
-        }
-    }
-    val totalPoints by derivedStateOf {
-        autoPoints + driverPoints + endgamePoints
-    }
-
     return listOf(
         { modifier ->
-            val text by remember { derivedStateOf { state.value.title } }
             TextField(
                 modifier = modifier,
                 label = "Title",
-                text = text,
+                text = state.value.match.title,
                 onValueChange = { newString ->
-                    mutableState.update {
-                        it.copy(
+                    mutableState.updateMatch { match ->
+                        match.copy(
                             title = newString
                         )
                     }
                 },
-                enabled = editEnabled.value
+                enabled = state.value.isEditEnabled
             )
         },
         { modifier ->
-            val activeIndex by remember { derivedStateOf { state.value.alliance } }
             AllianceButtons(
                 modifier = modifier,
                 firstText = "Red Alliance",
                 secondText = "Blue Alliance",
-                activeIndex = activeIndex,
+                activeIndex = state.value.match.alliance,
                 onButtonClicked = { index ->
-                    mutableState.update { match ->
+                    mutableState.updateMatch { match ->
                         match.copy(
                             alliance = if (match.alliance == index) null else index
                         )
                     }
                 },
-                enabled = editEnabled.value
+                enabled = state.value.isEditEnabled
             )
         },
         { modifier ->
             Title(
                 modifier = modifier,
                 title = "Autonomous points: ",
-                counter = autoPoints
+                counter = state.value.matchTotals.autoTotal
             )
         },
         { modifier ->
-            val counter by remember { derivedStateOf { state.value.autoTerminal } }
             TextCounter(
                 modifier = modifier,
                 text = "Cones in Terminal: ",
-                counter = counter,
-                enabled = editEnabled.value,
+                counter = state.value.match.autoTerminal,
+                enabled = state.value.isEditEnabled,
                 lowerLimit = 0,
-                upperLimit = autoUpperLimit + counter,
+                plusEnabled = state.value.matchLimits.autoPlusEnabled,
                 onClick = { add ->
-                    mutableState.update { match ->
+                    mutableState.updateMatch { match ->
+                        val driverUpperLimit = driverUpperLimits(match)
                         match.copy(
                             autoTerminal = match.autoTerminal + add,
                             driverTerminal =
@@ -211,16 +147,16 @@ fun screenList(
             )
         },
         { modifier ->
-            val counter by remember { derivedStateOf { state.value.autoGroundJunction } }
             TextCounter(
                 modifier = modifier,
                 text = "Cones on Ground: ",
-                counter = counter,
-                enabled = editEnabled.value,
+                counter = state.value.match.autoGroundJunction,
+                enabled = state.value.isEditEnabled,
                 lowerLimit = 0,
-                upperLimit = autoUpperLimit + counter,
+                plusEnabled = state.value.matchLimits.autoPlusEnabled,
                 onClick = { add ->
-                    mutableState.update { match ->
+                    mutableState.updateMatch { match ->
+                        val driverUpperLimit = driverUpperLimits(match)
                         match.copy(
                             autoGroundJunction = match.autoGroundJunction + add,
                             driverGroundJunction =
@@ -233,16 +169,16 @@ fun screenList(
             )
         },
         { modifier ->
-            val counter by remember { derivedStateOf { state.value.autoLowJunction } }
             TextCounter(
                 modifier = modifier,
                 text = "Cones on Low: ",
-                counter = counter,
-                enabled = editEnabled.value,
+                counter = state.value.match.autoLowJunction,
+                enabled = state.value.isEditEnabled,
                 lowerLimit = 0,
-                upperLimit = autoUpperLimit + counter,
+                plusEnabled = state.value.matchLimits.autoPlusEnabled,
                 onClick = { add ->
-                    mutableState.update { match ->
+                    mutableState.updateMatch { match ->
+                        val driverUpperLimit = driverUpperLimits(match)
                         match.copy(
                             autoLowJunction = match.autoLowJunction + add,
                             driverLowJunction =
@@ -255,16 +191,16 @@ fun screenList(
             )
         },
         { modifier ->
-            val counter by remember { derivedStateOf { state.value.autoMediumJunction } }
             TextCounter(
                 modifier = modifier,
                 text = "Cones on Medium: ",
-                counter = counter,
-                enabled = editEnabled.value,
+                counter = state.value.match.autoMediumJunction,
+                enabled = state.value.isEditEnabled,
                 lowerLimit = 0,
-                upperLimit = autoUpperLimit + counter,
+                plusEnabled = state.value.matchLimits.autoPlusEnabled,
                 onClick = { add ->
-                    mutableState.update { match ->
+                    mutableState.updateMatch { match ->
+                        val driverUpperLimit = driverUpperLimits(match)
                         match.copy(
                             autoMediumJunction = match.autoMediumJunction + add,
                             driverMediumJunction =
@@ -277,16 +213,16 @@ fun screenList(
             )
         },
         { modifier ->
-            val counter by remember { derivedStateOf { state.value.autoHighJunction } }
             TextCounter(
                 modifier = modifier,
                 text = "Cones on High: ",
-                counter = counter,
-                enabled = editEnabled.value,
+                counter = state.value.match.autoHighJunction,
+                enabled = state.value.isEditEnabled,
                 lowerLimit = 0,
-                upperLimit = autoUpperLimit + counter,
+                plusEnabled = state.value.matchLimits.autoPlusEnabled,
                 onClick = { add ->
-                    mutableState.update { match ->
+                    mutableState.updateMatch { match ->
+                        val driverUpperLimit = driverUpperLimits(match)
                         match.copy(
                             autoHighJunction = match.autoHighJunction + add,
                             driverHighJunction =
@@ -299,17 +235,16 @@ fun screenList(
             )
         },
         { modifier ->
-            val activeIndex by remember { derivedStateOf { state.value.autoParked1 } }
             TextButton(
                 modifier = modifier,
-                label = if (twoTeams) "Parking 1: " else "Parking: ",
+                label = if (state.value.twoTeams) "Parking 1: " else "Parking: ",
                 buttons = listOf("Terminal or\nSubstation", "Signal Zone"),
-                activeIndex = activeIndex,
+                activeIndex = state.value.match.autoParked1,
                 specialColor = false,
                 visible = true,
-                enabled = editEnabled.value,
+                enabled = state.value.isEditEnabled,
                 onClick = { newIndex ->
-                    mutableState.update { match ->
+                    mutableState.updateMatch { match ->
                         match.copy(
                             autoParked1 = newIndex
                         )
@@ -318,17 +253,20 @@ fun screenList(
             )
         },
         { modifier ->
-            val checked by remember { derivedStateOf { state.value.customSignalSleeve1 } }
-            val visible by remember { derivedStateOf { state.value.autoParked1 == true } }
+            val text by remember{
+                derivedStateOf {
+                    if (state.value.twoTeams) "Custom Sleeve 1: " else "Custom Sleeve: "
+                }
+            }
             TextSwitch(
                 modifier = modifier,
-                text = if (twoTeams) "Custom Sleeve 1: " else "Custom Sleeve: ",
-                checked = checked,
+                text = text,
+                checked = state.value.match.customSignalSleeve1,
                 specialColor = false,
-                visible = visible,
-                enabled = editEnabled.value,
+                visible = state.value.matchVisibility.customSignalSleeve1,
+                enabled = state.value.isEditEnabled,
                 onChange = {
-                    mutableState.update { match ->
+                    mutableState.updateMatch { match ->
                         match.copy(
                             customSignalSleeve1 = it
                         )
@@ -337,17 +275,16 @@ fun screenList(
             )
         },
         { modifier ->
-            val activeIndex by remember { derivedStateOf { state.value.autoParked2 } }
             TextButton(
                 modifier = modifier,
                 label = "Parking 2: ",
                 buttons = listOf("Terminal or\nSubstation", "Signal Zone"),
-                activeIndex = activeIndex,
+                activeIndex = state.value.match.autoParked2,
                 specialColor = true,
-                visible = twoTeams,
-                enabled = editEnabled.value,
+                visible = state.value.twoTeams,
+                enabled = state.value.isEditEnabled,
                 onClick = { newIndex ->
-                    mutableState.update { match ->
+                    mutableState.updateMatch { match ->
                         match.copy(
                             autoParked2 = newIndex
                         )
@@ -356,17 +293,15 @@ fun screenList(
             )
         },
         { modifier ->
-            val checked by remember { derivedStateOf { state.value.customSignalSleeve2 } }
-            val visible by remember { derivedStateOf { state.value.autoParked2 == true && twoTeams } }
             TextSwitch(
                 modifier = modifier,
                 text = "Custom Sleeve 2: ",
-                checked = checked,
+                checked = state.value.match.customSignalSleeve2,
                 specialColor = true,
-                visible = visible,
-                enabled = editEnabled.value,
+                visible = state.value.matchVisibility.customSignalSleeve2,
+                enabled = state.value.isEditEnabled,
                 onChange = {
-                    mutableState.update { match ->
+                    mutableState.updateMatch { match ->
                         match.copy(
                             customSignalSleeve2 = it
                         )
@@ -378,20 +313,19 @@ fun screenList(
             Title(
                 modifier = modifier,
                 title = "Driver points: ",
-                counter = driverPoints
+                counter = state.value.matchTotals.driverTotal
             )
         },
         { modifier ->
-            val counter by remember { derivedStateOf { state.value.driverTerminal } }
             TextCounter(
                 modifier = modifier,
                 text = "Cones in Terminal: ",
-                counter = counter,
-                enabled = editEnabled.value,
+                counter = state.value.match.driverTerminal,
+                enabled = state.value.isEditEnabled,
                 lowerLimit = 0,
-                upperLimit = driverUpperLimit + counter,
+                plusEnabled = state.value.matchLimits.driverPlusEnabled,
                 onClick = { add ->
-                    mutableState.update { match ->
+                    mutableState.updateMatch { match ->
                         match.copy(
                             driverTerminal = match.driverTerminal + add
                         )
@@ -400,16 +334,15 @@ fun screenList(
             )
         },
         { modifier ->
-            val counter by remember { derivedStateOf { state.value.driverGroundJunction } }
             TextCounter(
                 modifier = modifier,
                 text = "Cones on Ground: ",
-                counter = counter,
-                enabled = editEnabled.value,
+                counter = state.value.match.driverGroundJunction,
+                enabled = state.value.isEditEnabled,
                 lowerLimit = 0,
-                upperLimit = driverUpperLimit + counter,
+                plusEnabled = state.value.matchLimits.driverPlusEnabled,
                 onClick = { add ->
-                    mutableState.update { match ->
+                    mutableState.updateMatch { match ->
                         match.copy(
                             driverGroundJunction = match.driverGroundJunction + add
                         )
@@ -418,16 +351,15 @@ fun screenList(
             )
         },
         { modifier ->
-            val counter by remember { derivedStateOf { state.value.driverLowJunction } }
             TextCounter(
                 modifier = modifier,
                 text = "Cones on Low: ",
-                counter = counter,
-                enabled = editEnabled.value,
+                counter = state.value.match.driverLowJunction,
+                enabled = state.value.isEditEnabled,
                 lowerLimit = 0,
-                upperLimit = driverUpperLimit + counter,
+                plusEnabled = state.value.matchLimits.driverPlusEnabled,
                 onClick = { add ->
-                    mutableState.update { match ->
+                    mutableState.updateMatch { match ->
                         match.copy(
                             driverLowJunction = match.driverLowJunction + add
                         )
@@ -436,16 +368,15 @@ fun screenList(
             )
         },
         { modifier ->
-            val counter by remember { derivedStateOf { state.value.driverMediumJunction } }
             TextCounter(
                 modifier = modifier,
                 text = "Cones on Medium: ",
-                counter = counter,
-                enabled = editEnabled.value,
+                counter = state.value.match.driverMediumJunction,
+                enabled = state.value.isEditEnabled,
                 lowerLimit = 0,
-                upperLimit = driverUpperLimit + counter,
+                plusEnabled = state.value.matchLimits.driverPlusEnabled,
                 onClick = { add ->
-                    mutableState.update { match ->
+                    mutableState.updateMatch { match ->
                         match.copy(
                             driverMediumJunction = match.driverMediumJunction + add
                         )
@@ -454,16 +385,15 @@ fun screenList(
             )
         },
         { modifier ->
-            val counter by remember { derivedStateOf { state.value.driverHighJunction } }
             TextCounter(
                 modifier = modifier,
                 text = "Cones on High: ",
-                counter = counter,
-                enabled = editEnabled.value,
+                counter = state.value.match.driverHighJunction,
+                enabled = state.value.isEditEnabled,
                 lowerLimit = 0,
-                upperLimit = driverUpperLimit + counter,
+                plusEnabled = state.value.matchLimits.driverPlusEnabled,
                 onClick = { add ->
-                    mutableState.update { match ->
+                    mutableState.updateMatch { match ->
                         match.copy(
                             driverHighJunction = match.driverHighJunction + add
                         )
@@ -475,20 +405,19 @@ fun screenList(
             Title(
                 modifier = modifier,
                 title = "Endgame points: ",
-                counter = endgamePoints
+                counter = state.value.matchTotals.endgameTotal
             )
         },
         { modifier ->
-            val checked by remember { derivedStateOf { state.value.circuitCompleted } }
             TextSwitch(
                 modifier = modifier,
                 text = "Circuit completed: ",
-                checked = checked,
+                checked = state.value.match.circuitCompleted,
                 specialColor = false,
                 visible = true,
-                enabled = editEnabled.value,
+                enabled = state.value.isEditEnabled,
                 onChange = {
-                    mutableState.update { match ->
+                    mutableState.updateMatch { match ->
                         match.copy(
                             circuitCompleted = it
                         )
@@ -497,16 +426,15 @@ fun screenList(
             )
         },
         { modifier ->
-            val counter by remember { derivedStateOf { state.value.junctionsOwnedByCone } }
             TextCounter(
                 modifier = modifier,
                 text = "Owned by Cone: ",
-                counter = counter,
-                enabled = editEnabled.value,
+                counter = state.value.match.junctionsOwnedByCone,
+                enabled = state.value.isEditEnabled,
                 lowerLimit = 0,
-                upperLimit = endgameUpperLimit + counter,
+                plusEnabled = state.value.matchLimits.endgameConePlusEnabled,
                 onClick = { add ->
-                    mutableState.update { match ->
+                    mutableState.updateMatch { match ->
                         match.copy(
                             junctionsOwnedByCone = match.junctionsOwnedByCone + add
                         )
@@ -515,16 +443,15 @@ fun screenList(
             )
         },
         { modifier ->
-            val counter by remember { derivedStateOf { state.value.junctionsOwnedByBeacons.toInt() } }
             TextCounter(
                 modifier = modifier,
                 text = "Owned by Beacon: ",
-                counter = counter,
-                enabled = editEnabled.value,
+                counter = state.value.match.junctionsOwnedByBeacons.toInt(),
+                enabled = state.value.isEditEnabled,
                 lowerLimit = 0,
-                upperLimit = min(endgameUpperLimit + counter, 2),
+                plusEnabled = state.value.matchLimits.endgameBeaconPlusEnabled,
                 onClick = { add ->
-                    mutableState.update { match ->
+                    mutableState.updateMatch { match ->
                         match.copy(
                             junctionsOwnedByBeacons = (match.junctionsOwnedByBeacons.toInt() + add).toBoolean()
                         )
@@ -533,16 +460,20 @@ fun screenList(
             )
         },
         { modifier ->
-            val checked by remember { derivedStateOf { state.value.endParked1 } }
+            val text by remember {
+                derivedStateOf {
+                    if (state.value.twoTeams) "Parking 1: " else "Parking: "
+                }
+            }
             TextSwitch(
                 modifier = modifier,
-                text = if (twoTeams) "Parking 1: " else "Parking: ",
-                checked = checked,
+                text = text,
+                checked = state.value.match.endParked1,
                 specialColor = false,
                 visible = true,
-                enabled = editEnabled.value,
+                enabled = state.value.isEditEnabled,
                 onChange = {
-                    mutableState.update { match ->
+                    mutableState.updateMatch { match ->
                         match.copy(
                             endParked1 = it
                         )
@@ -551,16 +482,15 @@ fun screenList(
             )
         },
         { modifier ->
-            val checked by remember { derivedStateOf { state.value.endParked2 } }
             TextSwitch(
                 modifier = modifier,
                 text = "Parking 2: ",
-                checked = checked,
+                checked = state.value.match.endParked2,
                 specialColor = true,
-                visible = twoTeams,
-                enabled = editEnabled.value,
+                visible = state.value.twoTeams,
+                enabled = state.value.isEditEnabled,
                 onChange = {
-                    mutableState.update { match ->
+                    mutableState.updateMatch { match ->
                         match.copy(
                             endParked2 = it
                         )
@@ -578,7 +508,7 @@ fun screenList(
                     Title(
                         modifier = Modifier.weight(1f),
                         title = "Total points: ",
-                        counter = totalPoints,
+                        counter = state.value.matchTotals.total,
                         paddingValues = PaddingValues()
                     )
                     Spacer(modifier = Modifier.size(88.dp))
@@ -613,5 +543,16 @@ private operator fun Int.plus(other: Boolean?): Int {
         true -> 2
         false -> 1
         else -> 0
+    }
+}
+
+private fun MutableStateFlow<EditorState>.updateMatch(
+    body: (match: Match) -> Match
+) {
+    this.update { editorState ->
+        val match = editorState.match
+        editorState.copy(
+            match = body(match)
+        )
     }
 }

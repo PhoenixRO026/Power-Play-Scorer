@@ -2,6 +2,7 @@ package com.phoenix.powerplayscorer.feature_editor.domain.model
 
 import android.os.Parcelable
 import androidx.annotation.Keep
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.phoenix.powerplayscorer.feature_editor.domain.util.autoId
@@ -40,18 +41,51 @@ data class Match(
     val autoHighJunction: Int = 0,
     val autoParked1: Boolean? = null,
     val customSignalSleeve1: Boolean = false,
+
+    @ColumnInfo(defaultValue = "0")
+    val autoTerminal2: Int = 0,
+    @ColumnInfo(defaultValue = "0")
+    val autoGroundJunction2: Int = 0,
+    @ColumnInfo(defaultValue = "0")
+    val autoLowJunction2: Int = 0,
+    @ColumnInfo(defaultValue = "0")
+    val autoMediumJunction2: Int = 0,
+    @ColumnInfo(defaultValue = "0")
+    val autoHighJunction2: Int = 0,
     val autoParked2: Boolean? = null,
     val customSignalSleeve2: Boolean = false,
 
+    @ColumnInfo(defaultValue = "0")
     val driverTerminal: Int = 0,
+    @ColumnInfo(defaultValue = "0")
     val driverGroundJunction: Int = 0,
+    @ColumnInfo(defaultValue = "0")
     val driverLowJunction: Int = 0,
+    @ColumnInfo(defaultValue = "0")
     val driverMediumJunction: Int = 0,
+    @ColumnInfo(defaultValue = "0")
     val driverHighJunction: Int = 0,
+
+    @ColumnInfo(defaultValue = "0")
+    val driverTerminal2: Int = 0,
+    @ColumnInfo(defaultValue = "0")
+    val driverGroundJunction2: Int = 0,
+    @ColumnInfo(defaultValue = "0")
+    val driverLowJunction2: Int = 0,
+    @ColumnInfo(defaultValue = "0")
+    val driverMediumJunction2: Int = 0,
+    @ColumnInfo(defaultValue = "0")
+    val driverHighJunction2: Int = 0,
 
     val junctionsOwnedByCone: Int = 0,
     val junctionsOwnedByBeacons: Boolean? = null,
-    val circuitCompleted: Boolean = false,
     val endParked1: Boolean = false,
-    val endParked2: Boolean = false
+
+    @ColumnInfo(defaultValue = "0")
+    val junctionsOwnedByCone2: Int = 0,
+    @ColumnInfo(defaultValue = "NULL")
+    val junctionsOwnedByBeacons2: Boolean? = null,
+    val endParked2: Boolean = false,
+
+    val circuitCompleted: Boolean = false
 ) : Parcelable

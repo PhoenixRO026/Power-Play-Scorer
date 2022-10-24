@@ -37,8 +37,8 @@ fun TextCounter (
     textStyle: TextStyle = MaterialTheme.typography.titleLarge,
     counter: Int,
     enabled: Boolean,
-    lowerLimit: Int,
-    upperLimit: Int,
+    lowerLimit: Int = 0,
+    plusEnabled: Boolean,
     onClick: (add: Int) -> Unit
 ) {
     Measure(
@@ -55,7 +55,7 @@ fun TextCounter (
             onClick = onClick,
             enabled = enabled,
             lowerLimit = lowerLimit,
-            upperLimit = upperLimit
+            plusEnabled = plusEnabled
         )
     }
 }
@@ -77,7 +77,8 @@ private fun Measure (
                     counter = counter,
                     textStyle = textStyle,
                     onClick = {},
-                    enabled = true
+                    enabled = true,
+                    plusEnabled = true
                 )
             }
         },
@@ -105,7 +106,7 @@ private fun Counter (
     onClick: (add: Int) -> Unit,
     enabled: Boolean,
     lowerLimit: Int = 0,
-    upperLimit: Int = 30,
+    plusEnabled: Boolean
 ) {
     val minus = painterResource(id = R.drawable.ic_baseline_minus_24)
 
@@ -157,7 +158,7 @@ private fun Counter (
                     }
                     CounterButton(
                         onClick = { onClick(1) },
-                        enabled = counter < upperLimit
+                        enabled = plusEnabled
                     ) {
                         Icon(Icons.Filled.Add, contentDescription = "Add")
                     }
