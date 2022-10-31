@@ -55,7 +55,6 @@ fun OutlinedTextField(
                 val isEmpty = remember(value, visualTransformation) {
                     visualTransformation.filter(AnnotatedString(value)).text.text.isEmpty()
                 }
-
                 MyLabel(
                     isEmpty = isEmpty,
                     interactionSource = interactionSource,
